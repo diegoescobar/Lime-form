@@ -85,7 +85,7 @@ class Validator
 
         // Load language file in directory
         //$langFile = rtrim($langDir, '/') . '/' . $lang . '.php';
-        $langFile = './lang/' . $lang . '.php';
+        $langFile = 'lang/' . $lang . '.php';
         
         if (stream_resolve_include_path($langFile) ) {
             $langMessages = include $langFile;
