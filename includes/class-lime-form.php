@@ -61,6 +61,9 @@ class lime_form {
 		foreach ( $request AS $key=>$value ){
 			$this->values[$key] = htmlentities(strip_tags($value));
 		}
+		
+		
+		unset($this->values[$this->settings['name']]);
 	}
 
 	public function db( $array = array() ){
@@ -121,7 +124,7 @@ class lime_form {
 
 				switch ($field['type']) {
 					case "textarea":
-						$form .= '<div><'.$field['type'].' id="'.$this->field_namer ( $field[0]).'" name='.$this->field_namer ( $field[0]).">" . $value . "</textarea></div>";
+						$form .= '<div><'.$field['type'].'  class="form-control" id="'.$this->field_namer ( $field[0]).'" name='.$this->field_namer ( $field[0]).">" . $value . "</textarea></div>";
 					break;
 					case "select":
 						//
@@ -133,6 +136,7 @@ class lime_form {
 						}
 						$form .= '</select></div>';
 					break;
+					
 					case "select":
 						$form .= '<div><select name="'.$this->field_namer ( $field[0]).'" id="'.$this->field_namer ( $field[0]).'">';
 						$sel = "";
@@ -159,7 +163,7 @@ class lime_form {
 						$form .= '<div><input type="'.$field['type'].'" name="'.$this->field_namer ( $field[0]).'" id="'.$this->field_namer ( $field[0]).'" value="' . $value . '"></div>';
 					break;
 					case "text":
-						$form .= '<div><input type="'.$field['type'].'" name="'.$this->field_namer ( $field[0]).'" id="'.$this->field_namer ( $field[0]).'" value="' . $value . '"></div>';
+						$form .= '<div><input type="'.$field['type'].'"  class="form-control" name="'.$this->field_namer ( $field[0]).'" id="'.$this->field_namer ( $field[0]).'" value="' . $value . '"></div>';
 					break;
 					case "datepicker":
 						$form .= '<div><input type="text" name="'.$this->field_namer ( $field[0]).'" id="'.$this->field_namer ( $field[0]).'" class="datepicker" value="' . $value . '"></div>';
@@ -206,6 +210,7 @@ class lime_form {
 		$form .= "<div>"."&nbsp;"."</div>";
 
 		$form .= "<div>".'<input type="submit" name="'.	$this->settings['name'].'" value="Submit">';
+		
 		$form .= "</div>";
 		$form .= "</div>";
 		$form .= "</form>";
@@ -239,7 +244,7 @@ class lime_form {
 				$this->file_upload();
 			}
 			
-			$form = "<div><h2>" . __("Form Successfully Submited") . "</h2></div>";
+			$form = "<div><h2>" . "Form Successfully Submited" . "</h2></div>";
 
 		}else{
 			$form = $this->from_header ( $this->settings );
@@ -301,7 +306,7 @@ class lime_form {
 	*/
 	function email($email = array()){
 		if (is_array( $email['settings']['addAddress'] )){
-			$this->email['addAddress'] = implode(',', $email['settings']['addAddress']);     // Add a recipient
+			$this->email['addAddress'] =  $email['settings']['addAddress'][0];     // Add a recipient
 		}else{
 			$this->email['addAddress'] = $email['settings']['addAddress'];     // Add a recipient
 		}
@@ -314,20 +319,31 @@ class lime_form {
 		if (isset($email['settings']['addBCC']))
 			$this->email['addBCC'] = implode(',', $email['settings']['addBCC']);
 		
+		if (isset($email['settings']['name']))
+			$this->email['name'] = $email['settings']['name'];
+		
+		if (isset($email['settings']['email']))
+			$this->email['email'] = $email['settings']['email'];
+		
 		$this->email['Subject'] = $email['settings']['Subject'];
 
+		//var_dump( $this->email );
+		
 		include_once (  __DIR__ . '/email_template.php' );
 		
 		$email_arr["logo"] = "";
 		$email_arr["content"] = "";
 		$email_arr["contact_info"] = "";
-		$this->email['Body']    = email_template ( $email_arr );
-		$this->email['AltBody'] = 'This is the body in plain text for non-HTML mail clients';
+		$this->email['Body']    = email_template ( array( 'content' => $this->email_body( $this->values ), 'contact_info' => '' ));
+		$this->email['AltBody'] = strip_tags( $this->email_body( $this->values )  );
 		
 		/*if ($attachment){
 		 $this->email['addAttachment'] = array('/var/tmp/file.tar.gz');// Add attachments
 		 }*/
 
+		
+		//	var_dump( $this->values );
+		
 		/* Set variables */
 		foreach ( $email['variables'] AS $key=>$fields){
 			if ( is_array( $fields )) {
@@ -344,7 +360,10 @@ class lime_form {
 				$this->email[ $key ] =  $value;
 			}
 		}
+		
+		//var_dump( $this->email );
 
+		//exit();
 	}
 
 	function email_body ( $array){
@@ -354,7 +373,7 @@ class lime_form {
 		if (isset( $array )){
 			$email_content .= '<table style="width:100%;">';
 			
-			foreach ($array AS $field ) {
+			foreach ($array AS $key=>$field ) {
 				$email_content .= '<tr>';
 				/* if field has existing value, set value */
 				if (isset($this->values[$this->field_namer ( $field[0])])){
@@ -365,6 +384,7 @@ class lime_form {
 				else{
 					$value = "";
 				}
+				if (isset($field['type'])){
 				switch ($field['type']) {
 					case "file":
 						//$email_content .= '<div><input type="'.$field['type'].'" name="'.$this->field_namer ( $field[0]).'" id="'.$this->field_namer ( $field[0]).'" value="' . $value . '"></div>';
@@ -376,6 +396,9 @@ class lime_form {
 					default:
 						$email_content .= '<td>'.$field[0].'</td><td>' . $value . "</td>";
 					break;	
+				}
+				}else{
+					$email_content .= '<td>'.$key .'</td><td>' . $field . "</td>";
 				}
 				$email_content .= "</tr>";
 			}
@@ -395,6 +418,10 @@ class lime_form {
 		
 		$mail = new PHPMailer;
 
+		//var_dump( $this->email );
+		
+	//	echo  $this->email["addAddress"];
+		
 		$mail->From = $this->email['email'];
 		$mail->FromName = $this->email['name'];
 		$mail->addAddress($this->email['addAddress']);     // Add a recipient
@@ -416,10 +443,16 @@ class lime_form {
 		$mail->Subject = $this->email['Subject'];
 		$mail->Body    = $this->email['Body'];
 		$mail->AltBody = $this->email['AltBody'];
+		//var_dump( $this->email  );
 		
 		if(!$mail->send()) {
 			$this->errors['email'] = 'Message could not be sent.';
 			$this->errors['email_info'] = $mail->ErrorInfo;
+			
+			var_dump( $this->errors['email_info']  );
+		}else {
+			return true;
+			
 		}
 	}
 
@@ -436,12 +469,18 @@ class lime_form {
 	*/
 	function db_insert ( $array = array() ){
 		foreach ( $this->db_data['fields'] AS $key=>$value){
-			if (is_array( $value )){ $value = serialize( $value ); }
-			$query = "INSERT INTO " . $this->db_data['table'] . ' ( ' . $key . ' ) VALUES ( "' . addslashes( $value ) . '" )';
+			if (is_array( $value )){ $value = serialize( $value ); }else{ $value = $this->values[$value]; }
+			$keys[] = $key;
+			$values[] = addslashes( $value );
 		}
 
+		$query = "INSERT INTO " . $this->db_data['table'] . ' ( ' . implode(',', $keys ) . ' ) VALUES ( "' . implode('","', $values)  . '" )';
+		
+		
 		if (!mysqli_query($this->db, $query)) {
 			$this->errors['alert'] = "Error description: " . mysqli_error( $this->db );
+			
+			//var_dump( mysqli_error( $this->db ));
 		}
 	}
 
